@@ -56,18 +56,29 @@ def arrange_column_words(theme_word, unfiltered_thematic_bucket_list):
     #do i do this in here or in a seperate function? i guess i do it here
     #maybe in regards to re-usability, i want to have it seperate? considering that i need to re-use the thematic bucket list again in the puzzle logic? im not sure
     
-    for letter in theme_word:
+    for column_index, letter in enumerate(theme_word):
         found_match = False
 
         for word in unfiltered_thematic_bucket_list:
+            for letter_index, word_char in enumerate(word):
 
-            if letter in word:
-                thematic_bucket_list.append(word)
-                unfiltered_thematic_bucket_list.remove(word)
-                found_match = True
+                if word_char == letter:
+                    
+                    column_dict = {
+                        "word": word,
+                        "theme_index": column_index,
+                        "word_index": letter_index
+                    }
+
+                    thematic_bucket_list.append(column_dict)
+                    unfiltered_thematic_bucket_list.remove(word)
+                    found_match = True
+                    break
+            if found_match:
                 break
         if not found_match :
-            thematic_bucket_list.append("?????")
+            raise ValueError("no fitting word found, try again")
+            #implement logic later to re-run the file for another theme word(?)
 
     return thematic_bucket_list
 
