@@ -13,7 +13,7 @@ I was thinking of just making an automatic mini-crossword generator and mess wit
 
 the end result would look a lot like a cryptex machine and hence the name ;D
 
-This project really started with a word file an a table like this: 
+This project really started with a word file and a table like this: 
 ![first word idea screenshot](ideation.jpg)
 
 ## The code
