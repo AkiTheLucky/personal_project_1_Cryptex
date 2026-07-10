@@ -28,4 +28,52 @@ def get_theme_word():
     
     return theme_word
 
-print(get_theme_word())
+
+
+def get_thematic_bucket(theme_word):
+    datamuse_request_url = "https://api.datamuse.com/words?ml=" + theme_word + "&md=f"
+    response = requests.get(datamuse_request_url)
+    response_list = response.json()
+
+    unfiltered_thematic_bucket_list = []
+    
+    for item in response_list:
+        item_text = item["word"]
+        if " " not in item_text and "-" not in item_text:
+            unfiltered_thematic_bucket_list.append(item_text.upper())
+    
+    
+
+
+
+    return unfiltered_thematic_bucket_list 
+
+
+#new function for the word matching
+def arrange_column_words(theme_word, unfiltered_thematic_bucket_list):
+    thematic_bucket_list = []
+    #to get from the unfiltered list to the filtered list, i need to get len(theme_word) amount of words that share the right letters
+    #do i do this in here or in a seperate function? i guess i do it here
+    #maybe in regards to re-usability, i want to have it seperate? considering that i need to re-use the thematic bucket list again in the puzzle logic? im not sure
+    
+    for letter in theme_word:
+        found_match = False
+
+        for word in unfiltered_thematic_bucket_list:
+
+            if letter in word:
+                thematic_bucket_list.append(word)
+                unfiltered_thematic_bucket_list.remove(word)
+                found_match = True
+                break
+        if not found_match :
+            thematic_bucket_list.append("?????")
+
+    return thematic_bucket_list
+
+# print it for now, so i can see whats happening! 
+theme_word = get_theme_word() 
+thematic_bucket = get_thematic_bucket(theme_word) 
+print(theme_word)
+print(thematic_bucket)
+print(arrange_column_words(theme_word, thematic_bucket))
