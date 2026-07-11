@@ -1,6 +1,7 @@
 import random
 import requests
 import string
+from blessed import Terminal
 
 def get_theme_word():
 
@@ -82,9 +83,46 @@ def arrange_column_words(theme_word, unfiltered_thematic_bucket_list):
 
     return thematic_bucket_list
 
+
+#time to build the matrix that will get printed on the screen later
+def build_cryptex_matrix(theme_word, thematic_bucket_list):
+    #1. Find the height of the tallest column / longest aux word
+    max_height_matrix = max(len(item["word"]) for item in thematic_bucket_list) +1 
+    
+    matrix_width= len(theme_word)
+
+    cryptex_matrix = []
+
+    for i in range(matrix_width):
+        column_list = [" "] * max_height_matrix
+        cryptex_matrix.append(column_list)
+       
+    
+    #2nd loop to drop in the words
+    for column_index in range(matrix_width):
+        current_word = thematic_bucket_list[column_index]["word"]
+
+        for char_index, char in enumerate(current_word):
+            cryptex_matrix[column_index][char_index] = char
+            
+        
+
+
+
+    return cryptex_matrix
+
+#draw matrix to screen logic here:
+
+
+
 # print it for now, so i can see whats happening! 
 theme_word = get_theme_word() 
-thematic_bucket = get_thematic_bucket(theme_word) 
+unfiltered_thematic_bucket = get_thematic_bucket(theme_word) 
+thematic_bucket_list = arrange_column_words(theme_word, unfiltered_thematic_bucket)
+
+
 print(theme_word)
-print(thematic_bucket)
-print(arrange_column_words(theme_word, thematic_bucket))
+print("\n")
+print(arrange_column_words(theme_word, unfiltered_thematic_bucket))
+print("\n")
+print(build_cryptex_matrix(theme_word, thematic_bucket_list))
