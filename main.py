@@ -111,7 +111,58 @@ def build_cryptex_matrix(theme_word, thematic_bucket_list):
 
     return cryptex_matrix
 
+
+#remote control?
+term = Terminal()
+
 #draw matrix to screen logic here:
+def draw_cryptex_board(cryptex_matrix, term):
+    #print clear screen to the terminal
+    print(term.clear)
+
+
+    #draw a box around my game
+    box_start_x = 5
+    box_start_y = 2
+    box_width = (len(cryptex_matrix) * 4) + 12
+    box_height = (len(cryptex_matrix[0])) + 8
+
+    for current_x in range(box_start_x, box_start_x + box_width):
+        print(term.move_xy(current_x, box_start_y) + "==") #top edge
+
+        print(term.move_xy(current_x, box_start_y + box_height) + "==") # bottom edge
+    
+
+    
+    for current_y in range(box_start_y, box_start_y + box_height):
+        print(term.move_xy(box_start_x, current_y) + "|") #left edge
+
+        print(term.move_xy(box_start_x + box_width, current_y) + "|") #right edge
+
+    print(term.move_xy(box_start_x,box_start_y)+ "+")
+
+
+    #draw the letters
+    #set the x pos for the rows (how far to the right)
+    starting_x_pos = 10
+
+    for column_index, column_data in enumerate(cryptex_matrix):
+        #reset the Y position for each new column so they all start at the top
+        current_y_pos = 5
+        
+        # loop through each char in column x
+        for char in column_data:
+            #use blessed to teleport cursor to the desired location
+            print(term.move_xy(starting_x_pos, current_y_pos) + char)
+
+            #move one row down:
+            current_y_pos += 1
+
+        #outside the inner loop, move the cursor over to the next column. lets see how much to the right
+        starting_x_pos += 4 
+
+
+
 
 
 
@@ -126,3 +177,18 @@ print("\n")
 print(arrange_column_words(theme_word, unfiltered_thematic_bucket))
 print("\n")
 print(build_cryptex_matrix(theme_word, thematic_bucket_list))
+
+
+cryptex_matrix = build_cryptex_matrix(theme_word, thematic_bucket_list)
+#actually do the drawing in a while loop to handle issues with the terminal
+with term.fullscreen(), term.cbreak(), term.hidden_cursor():
+    #call the func from earlier that does the printing and drawing logic
+
+    draw_cryptex_board(cryptex_matrix, term)
+    
+    #actual game loop here:
+    while True:
+        key = term.inkey()
+
+        if key.lower() == "q":
+            break
