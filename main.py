@@ -122,29 +122,34 @@ def draw_cryptex_board(cryptex_matrix, term):
 
 
     #draw a box around my game
-    box_start_x = 5
-    box_start_y = 2
+    
     box_width = (len(cryptex_matrix) * 4) + 12
     box_height = (len(cryptex_matrix[0])) + 8
+    box_start_x = (term.width - box_width) // 2
+    box_start_y = (term.height - box_height) // 2
+
 
     for current_x in range(box_start_x, box_start_x + box_width):
-        print(term.move_xy(current_x, box_start_y) + "==") #top edge
+        print(term.move_xy(current_x, box_start_y) + term.blue("─")) #top edge
 
-        print(term.move_xy(current_x, box_start_y + box_height) + "==") # bottom edge
+        print(term.move_xy(current_x, box_start_y + box_height) + term.blue("─")) # bottom edge
     
 
     
     for current_y in range(box_start_y, box_start_y + box_height):
-        print(term.move_xy(box_start_x, current_y) + "|") #left edge
+        print(term.move_xy(box_start_x, current_y) + term.blue("|")) #left edge
 
-        print(term.move_xy(box_start_x + box_width, current_y) + "|") #right edge
-
-    print(term.move_xy(box_start_x,box_start_y)+ "+")
+        print(term.move_xy(box_start_x + box_width, current_y) + term.blue("|")) #right edge
+    #corners
+    print(term.move_xy(box_start_x,box_start_y)+ term.blue("+"))
+    print(term.move_xy(box_start_x + box_width ,box_start_y)+ term.blue("+"))
+    print(term.move_xy(box_start_x,box_start_y + box_height)+ term.blue("+"))
+    print(term.move_xy(box_start_x + box_width ,box_start_y + box_height)+ term.blue("+"))
 
 
     #draw the letters
     #set the x pos for the rows (how far to the right)
-    starting_x_pos = 10
+    starting_x_pos = (term.width - box_width) // 2 + 4
 
     for column_index, column_data in enumerate(cryptex_matrix):
         #reset the Y position for each new column so they all start at the top
@@ -153,7 +158,7 @@ def draw_cryptex_board(cryptex_matrix, term):
         # loop through each char in column x
         for char in column_data:
             #use blessed to teleport cursor to the desired location
-            print(term.move_xy(starting_x_pos, current_y_pos) + char)
+            print(term.move_xy(starting_x_pos, current_y_pos) + term.green(char))
 
             #move one row down:
             current_y_pos += 1
@@ -170,7 +175,7 @@ def draw_cryptex_board(cryptex_matrix, term):
 theme_word = get_theme_word() 
 unfiltered_thematic_bucket = get_thematic_bucket(theme_word) 
 thematic_bucket_list = arrange_column_words(theme_word, unfiltered_thematic_bucket)
-
+cryptex_matrix = build_cryptex_matrix(theme_word, thematic_bucket_list)
 
 print(theme_word)
 print("\n")
@@ -178,11 +183,21 @@ print(arrange_column_words(theme_word, unfiltered_thematic_bucket))
 print("\n")
 print(build_cryptex_matrix(theme_word, thematic_bucket_list))
 
+# 1. Calculate minimum required size to draw the game
+required_width = (len(cryptex_matrix) * 4) + 12 
+required_height = (len(cryptex_matrix[0])) + 8
+if term.width < required_width or term.height < required_height:
+    print("Your terminal is too small!")
+    print(f"Please resize it to at least {required_width}x{required_height} characters.")
+    print(f"Current size: {term.width}x{term.height}")
+    exit() # Stop the game immediately
+
 
 cryptex_matrix = build_cryptex_matrix(theme_word, thematic_bucket_list)
 #actually do the drawing in a while loop to handle issues with the terminal
 with term.fullscreen(), term.cbreak(), term.hidden_cursor():
     #call the func from earlier that does the printing and drawing logic
+
 
     draw_cryptex_board(cryptex_matrix, term)
     
