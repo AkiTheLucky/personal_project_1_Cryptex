@@ -116,7 +116,7 @@ def build_cryptex_matrix(theme_word, thematic_bucket_list):
 term = Terminal()
 
 #draw matrix to screen logic here:
-def draw_cryptex_board(cryptex_matrix, term):
+def draw_cryptex_board(cryptex_matrix, term, active_column_index):
     #print clear screen to the terminal
     print(term.clear)
 
@@ -124,7 +124,7 @@ def draw_cryptex_board(cryptex_matrix, term):
     #draw a box around my game
     
     box_width = (len(cryptex_matrix) * 4) + 12
-    box_height = (len(cryptex_matrix[0])) + 8
+    box_height = (len(cryptex_matrix[0])) + 4
     box_start_x = (term.width - box_width) // 2
     box_start_y = (term.height - box_height) // 2
 
@@ -153,12 +153,20 @@ def draw_cryptex_board(cryptex_matrix, term):
 
     for column_index, column_data in enumerate(cryptex_matrix):
         #reset the Y position for each new column so they all start at the top
-        current_y_pos = 5
+        current_y_pos = box_start_y + 2
         
+        # Check if the column we are about to draw is the active one!
+        is_active = (column_index == active_column_index)
+
         # loop through each char in column x
         for char in column_data:
-            #use blessed to teleport cursor to the desired location
-            print(term.move_xy(starting_x_pos, current_y_pos) + term.green(char))
+            if is_active:
+                #use blessed to print active column in reverse
+                print(term.move_xy(starting_x_pos, current_y_pos) + term.reverse(term.green(char)))
+
+            else:
+                #use blessed to teleport cursor to the desired location
+                print(term.move_xy(starting_x_pos, current_y_pos) + term.green(char))
 
             #move one row down:
             current_y_pos += 1
@@ -195,15 +203,67 @@ if term.width < required_width or term.height < required_height:
 
 cryptex_matrix = build_cryptex_matrix(theme_word, thematic_bucket_list)
 #actually do the drawing in a while loop to handle issues with the terminal
+#this is actually the main game loop??? wow oh lol, its not. its further down
 with term.fullscreen(), term.cbreak(), term.hidden_cursor():
+    
+    #declare some variables needed later
+    active_column_index = 0
+    solve_row_index = -1 # Or whatever row I want them to align on. lets see what feels best
+    #solve_row_index = len(cryptex_matrix[0])
+
+    
     #call the func from earlier that does the printing and drawing logic
-
-
-    draw_cryptex_board(cryptex_matrix, term)
+    draw_cryptex_board(cryptex_matrix, term, active_column_index)
     
     #actual game loop here:
     while True:
         key = term.inkey()
-
+        #exit key
         if key.lower() == "q":
             break
+
+        elif key.name == "KEY_LEFT":
+            if active_column_index == 0:
+                pass
+            else:
+                active_column_index -= 1
+             
+        elif key.name == "KEY_RIGHT":
+            if active_column_index == len(cryptex_matrix) - 1 : #lol, index off by one because 0,1,2,3,4 != 5 
+                pass
+            else:
+                active_column_index += 1
+        
+        elif key.name == "KEY_UP":
+            # Rotate the data in cryptex_matrix[active_column_index] "up"
+            active_column = cryptex_matrix[active_column_index]
+
+            #move topblock to bottom
+            top_block = active_column.pop(0)
+            active_column.append(top_block)
+             
+            
+        elif key.name == "KEY_DOWN":
+            # Rotate the data in cryptex_matrix[active_column_index] "down"
+            active_column = cryptex_matrix[active_column_index]
+
+            #move bottom block to top
+            bottom_block = active_column.pop()
+            active_column.insert(0, bottom_block)
+            
+
+        #all further keys here!!
+
+        draw_cryptex_board(cryptex_matrix, term, active_column_index)
+            
+        # ==========================================
+        # 5. CHECK FOR WIN CONDITION
+        # ==========================================
+        current_guess = ""
+        for column in cryptex_matrix:
+            letter = column[solve_row_index]
+
+            current_guess += letter
+        if current_guess == theme_word:
+            #insert cool winning animation here!
+            break 
