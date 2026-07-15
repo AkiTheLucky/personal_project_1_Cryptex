@@ -3,6 +3,9 @@ import requests
 import string
 from blessed import Terminal
 
+#for the win screen
+from terminaltexteffects.effects.effect_burn import Burn
+
 def get_theme_word():
 
     popular_words_list = []
@@ -112,6 +115,69 @@ def build_cryptex_matrix(theme_word, thematic_bucket_list):
     return cryptex_matrix
 
 
+
+#screenshot helper function for winning screen
+def create_perfect_board_snapshot(cryptex_matrix, term, box_start_x, box_start_y):
+    snapshot_lines = []
+    
+    cols = len(cryptex_matrix)
+    rows = len(cryptex_matrix[0])
+    box_width = (cols * 4) + 12
+    
+    # ==========================================
+    # 1. TOP Y PADDING (Empty lines before the box)
+    # ==========================================
+    for _ in range(box_start_y):
+        snapshot_lines.append(" " * term.width)
+        
+    # ==========================================
+    # 2. X PADDING HELPER 
+    # ==========================================
+    def pad_x(line_content):
+        # Add the left offset
+        left_pad = " " * box_start_x
+        # Calculate exactly how many spaces are needed to reach the right wall
+        right_pad_len = term.width - box_start_x - len(line_content)
+        right_pad = " " * max(0, right_pad_len)
+        return left_pad + line_content + right_pad
+
+    # ==========================================
+    # 3. BUILD THE BOX (using the pad_x helper)
+    # ==========================================
+    top_edge = "+" + ("─" * (box_width - 1)) + "+"
+    snapshot_lines.append(pad_x(top_edge))
+    
+    empty_row = "|" + (" " * (box_width - 1)) + "|"
+    snapshot_lines.append(pad_x(empty_row))
+    
+    for r in range(rows):
+        is_solve_row = (r == rows - 1) 
+        left_char = ">" if is_solve_row else "|"
+        row_str = left_char + "   "
+        
+        for c in range(cols):
+            row_str += cryptex_matrix[c][r] + "   "
+            
+        padding_needed = (box_width + 1) - len(row_str) - 1
+        right_char = "<" if is_solve_row else "|"
+        row_str += (" " * padding_needed) + right_char
+        
+        snapshot_lines.append(pad_x(row_str))
+
+    snapshot_lines.append(pad_x(empty_row))
+    snapshot_lines.append(pad_x(empty_row))
+    bottom_edge = "+" + ("─" * (box_width - 1)) + "+"
+    snapshot_lines.append(pad_x(bottom_edge))
+
+    # ==========================================
+    # 4. BOTTOM Y PADDING (Empty lines after the box)
+    # ==========================================
+    current_lines = len(snapshot_lines)
+    for _ in range(term.height - current_lines):
+        snapshot_lines.append(" " * term.width)
+
+    return "\n".join(snapshot_lines)
+
 #remote control?
 term = Terminal()
 
@@ -156,7 +222,7 @@ def draw_cryptex_board(cryptex_matrix, term, active_column_index):
 
     #print titel and controls in ascii art next to box
     # ==========================================
-    # UI SIDE PANEL (Title & Controls)
+    # RIGHT UI SIDE PANEL (Title & Controls)
     # ==========================================
     
     # 1. Define your ASCII art using a "raw" string (r"") 
@@ -186,6 +252,42 @@ def draw_cryptex_board(cryptex_matrix, term, active_column_index):
     # Start the Y coordinate at the exact same height as the top of the box
     ui_current_y = box_start_y 
 
+
+    # ==========================================
+    # LEFT UI PANEL (How to Play)
+    # ==========================================
+    
+    # 1. Define your instructions
+    instructions_text = [
+        "HOW TO PLAY:",
+        "────────────",
+        "1. Read each word from ",
+        "   top to bottom.",
+        "",
+        "2. Spin the columns using",
+        "   the arrow keys.",
+        "",
+        "3. Align the hidden theme",
+        "   word between the red",
+        "   > pointers <.",
+        "",
+        "4. Crack the crypTerminal to",
+        "   escape!"
+    ]
+
+    # 2. Calculate the Left X Coordinate
+    # Start 35 spaces to the LEFT of the box's left edge
+    left_panel_x = box_start_x - 35 
+    
+    # Push the text down a couple of rows so it aligns nicely 
+    # with the middle of the game board
+    left_ui_y = box_start_y + 2 
+
+    # 3. Print the lines!
+    for line in instructions_text:
+        # Let's make the instructions magenta/purple to contrast the right panel!
+        print(term.move_xy(left_panel_x, left_ui_y) + term.magenta(line))
+        left_ui_y += 1
     # 3. Loop through the ASCII art and print it line by line
     # .strip("\n") removes the blank lines at the very top/bottom of the raw string
     # .split("\n") turns the multiline string into a list of individual lines
@@ -272,6 +374,8 @@ def generate_playable_board():
 
 # Now, in your main code, you just call this ONE function:
 
+#win condition global variable
+player_won = False
 
 # print it for now, so i can see whats happening! 
 
@@ -286,7 +390,7 @@ print("\n")
 print(build_cryptex_matrix(theme_word, thematic_bucket_list))
 
 # 1. Calculate minimum required size to draw the game
-required_width = (len(cryptex_matrix) * 4) + 12  + 65 #ish for the title
+required_width = (len(cryptex_matrix) * 4) + 12  + 65 + 40#ish for the title + instructions
 required_height = (len(cryptex_matrix[0])) + 8
 if term.width < required_width or term.height < required_height:    #the minus 20 is to move everything to the left for the titel to fit on the right
                                                                     # dont forget to also change the other variable that is dependant on term.width!
@@ -376,4 +480,41 @@ with term.fullscreen(), term.cbreak(), term.hidden_cursor():
             current_guess += letter
         if current_guess == theme_word:
             #insert cool winning animation here!
+            player_won = True
+            # Recalculate where the box is currently sitting on the screen
+            box_width = (len(cryptex_matrix) * 4) + 12
+            box_height = (len(cryptex_matrix[0])) + 4
+            box_start_x = (term.width - (box_width)) // 2 # Accounting for your UI panel!
+            box_start_y = (term.height - box_height) // 2
+
+            # 📸 TAKE THE PIXEL-PERFECT, FULL-SCREEN SNAPSHOT!
+            final_board_string = create_perfect_board_snapshot(cryptex_matrix, term, box_start_x, box_start_y)
+            
             break 
+
+if player_won :
+    print(term.clear)
+    
+    winning_text = """
+ __   __  _______  __   __    _     _  ___   __    _  __  
+|  | |  ||       ||  | |  |  | | _ | ||   | |  |  | ||  | 
+|  |_|  ||   _   ||  | |  |  | || || ||   | |   |_| ||  | 
+|       ||  | |  ||  |_|  |  |       ||   | |       ||  | 
+|_     _||  |_|  ||       |  |       ||   | |  _    ||__| 
+  |   |  |       ||       |  |   _   ||   | | | |   | __  
+  |___|  |_______||_______|  |__| |__||___| |_|  |__||__| 
+"""
+    
+    # Create the animation using the snapshot of the board they just solved!
+    my_animation = Burn(final_board_string)
+    my_animation2 = Burn(winning_text)
+
+# 1. Play the first animation (The Board)
+    with my_animation.terminal_output() as terminal:
+        for frame in my_animation:
+            terminal.print(frame)
+
+    # 2. Play the second animation (The Victory Title)
+    with my_animation2.terminal_output() as terminal:
+        for frame in my_animation2:
+            terminal.print(frame)
