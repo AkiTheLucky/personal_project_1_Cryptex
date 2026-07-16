@@ -35,18 +35,68 @@ def get_theme_word():
 
 
 def get_thematic_bucket(theme_word):
-    datamuse_request_url = "https://api.datamuse.com/words?ml=" + theme_word + "&md=f"
-    response = requests.get(datamuse_request_url)
-    response_list = response.json()
-
+    theme_word = theme_word.upper()
+    
+    # We query multiple Datamuse endpoints to gather a diverse mix of words
+    # ml = Means Like, rel_trg = Associative Triggers, rel_syn = Synonyms
+    queries = [
+        f"https://api.datamuse.com/words?ml={theme_word}&md=f",
+        f"https://api.datamuse.com/words?rel_trg={theme_word}&md=f",
+        f"https://api.datamuse.com/words?rel_syn={theme_word}&md=f"
+    ]
+    
+    raw_words = {}
+    
+    for url in queries:
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                for item in response.json():
+                    word = item["word"].upper()
+                    
+                    # Robust frequency score parsing (handles potential tag order variations)
+                    freq = 0.0
+                    if "tags" in item:
+                        for tag in item["tags"]:
+                            if tag.startswith("f:"):
+                                freq = float(tag[2:])
+                                break
+                    
+                    # Store unique words, keeping the one with the highest frequency/score
+                    if word not in raw_words or freq > raw_words[word]["freq"]:
+                        raw_words[word] = {
+                            "freq": freq,
+                            "score": item.get("score", 0)
+                        }
+        except Exception:
+            # If a single request fails, carry on to the next
+            continue
+            
     unfiltered_thematic_bucket_list = []
     
-    for item in response_list:
-        item_text = item["word"]
-        if " " not in item_text and "-" not in item_text:
-            unfiltered_thematic_bucket_list.append(item_text.upper())
-    
-    
+    for word, meta in raw_words.items():
+        # 1. Clean up: Skip phrases, hyphenated words, or non-alphabetic strings
+        if " " in word or "-" in word or not word.isalpha():
+            continue
+            
+        # 2. Substring & Stem Block: 
+        # Prevents "lamppost" for "lamp" (theme_word in word)
+        # And prevents "lamp" for "lamppost" (word in theme_word)
+        if theme_word in word or word in theme_word:
+            continue
+            
+        # 3. Popularity threshold: filter out highly obscure words.
+        # A frequency score (per million words) of > 1.0 or 2.0 ensures 
+        # the auxiliary words are recognizable to an average player.
+        if meta["freq"] < 1.5:
+            continue
+            
+        # 4. Length limits: keep the vertical columns visually balanced 
+        # (e.g., between 4 and 9 letters)
+        if not (4 <= len(word) <= 9):
+            continue
+            
+        unfiltered_thematic_bucket_list.append(word)
 
 
 
@@ -90,7 +140,7 @@ def arrange_column_words(theme_word, unfiltered_thematic_bucket_list):
 #time to build the matrix that will get printed on the screen later
 def build_cryptex_matrix(theme_word, thematic_bucket_list):
     #1. Find the height of the tallest column / longest aux word
-    max_height_matrix = max(len(item["word"]) for item in thematic_bucket_list) +1 
+    max_height_matrix = max(len(item["word"]) for item in thematic_bucket_list) + 1 
     
     matrix_width= len(theme_word)
 
@@ -199,7 +249,7 @@ def draw_cryptex_board(cryptex_matrix, term, active_column_index):
         print(term.move_xy(current_x, box_start_y) + term.blue("─")) #top edge
 
         print(term.move_xy(current_x, box_start_y + box_height) + term.blue("─")) # bottom edge
-    
+        print(term.move_xy(current_x, box_start_y + box_height - 2 ) + term.yellow("-"))
 
     
     for current_y in range(box_start_y, box_start_y + box_height):
@@ -231,7 +281,7 @@ def draw_cryptex_board(cryptex_matrix, term, active_column_index):
       ___               _____               _           _ 
      / __|_ _ _  _ _ __|_   _|__ _ _ _ __ _(_)_ _  __ _| |
     | (__| '_| || | '_ \ | |/ -_) '_| '  \ | | ' \/ _` | |
-     \___|_|  \_, | .__/ |_|\___|_| |_|_|_|_|_||_\__,_|_|
+     \___|_|  \_, | .__/ |_|\___|_| |_|_|_||_|_||_\__,_|_|
               |__/|_|                                     
     """
 
